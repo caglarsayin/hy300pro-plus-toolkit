@@ -53,6 +53,54 @@ class GuardTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 p.restore(Fake(), path)
 
+    def test_short_binary_backup_is_rejected(self):
+        class Fake:
+            def guard(self): pass
+            def adb(self, *args, **kwargs):
+                return p.subprocess.CompletedProcess(args, 0, stdout=b'ANDROID!')
+        data = {'partitions': {'boot_a': {'start_sector': 1, 'sectors': 2},
+                               'boot_b': {'start_sector': 3, 'sectors': 2}}}
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / 'backup'
+            with patch.object(p, 'inventory', return_value=data):
+                with self.assertRaisesRegex(RuntimeError, 'Short backup chunk'):
+                    p.backup(Fake(), target)
+            self.assertFalse((target / 'manifest.json').exists())
+
+    def test_restore_preserves_previously_disabled_packages(self):
+        calls = []
+        class Fake:
+            def guard(self): pass
+            def shell(self, command):
+                calls.append(command)
+                return ''
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / 'state.json'
+            state.write_text(p.json.dumps({'build': p.BUILD, 'hardware': p.HARDWARE,
+                'packages': {
+                    p.PACKAGES[0]: {'was_disabled': True, 'disabled_by_tool': False},
+                    p.PACKAGES[1]: {'was_disabled': False, 'disabled_by_tool': True}}}))
+            p.restore(Fake(), state)
+        self.assertNotIn('pm enable --user 0 ' + p.PACKAGES[0], calls)
+        self.assertIn('pm enable --user 0 ' + p.PACKAGES[1], calls)
+
+    def test_usb_restart_retries_stale_transport(self):
+        class Fake:
+            reads = 0
+            def guard(self): pass
+            def shell(self, command): return ''
+            def adb(self, *args, **kwargs): pass
+            def prop(self, key):
+                if key == 'persist.adb.tcp.port': return '-1'
+                self.reads += 1
+                if self.reads == 1:
+                    raise p.subprocess.CalledProcessError(1, 'adb')
+                return '0'
+        d = Fake()
+        with patch.object(p.time, 'sleep'):
+            p.usb_only(d)
+        self.assertEqual(d.reads, 2)
+
 
 if __name__ == '__main__':
     unittest.main()

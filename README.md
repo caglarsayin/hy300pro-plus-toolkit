@@ -19,6 +19,7 @@ python3 scripts/projector.py inspect
 python3 scripts/projector.py isolate
 python3 scripts/projector.py backup --out "$HOME/hy300-private-backup" --full
 python3 scripts/projector.py contain --state "$HOME/hy300-private-backup/containment-state.json"
+python3 scripts/projector.py usb-only
 ```
 
 The full backup needs approximately 8 GB free space, plus working space. Keep the
@@ -68,9 +69,10 @@ verified fallback.
 
 Wi-Fi hardware and normal streaming remain available. Use Settings to enable
 Wi-Fi when ready, preferably on a guest/IoT network that cannot access your other
-devices. Keep network debugging off. The tested stock image exposed ADB on TCP
-5555; the owner session switches ADB to USB-only. Recheck after every reboot and
-firmware update because vendor services may change settings.
+devices. **Turn USB/ADB debugging off in Settings after maintenance.** The tested
+stock image forces ADB onto TCP 5555 at boot even with
+`persist.adb.tcp.port=-1`. `usb-only` works for the current session only; it is
+not a permanent fix. Recheck after every reboot and firmware update.
 
 ```sh
 adb usb
@@ -78,9 +80,24 @@ adb shell getprop service.adb.tcp.port
 adb shell getprop persist.adb.tcp.port
 ```
 
-`service.adb.tcp.port` should be `-1` (or disabled by the platform), not `5555`.
+`service.adb.tcp.port` should be `0`, `-1`, or unset, not `5555`.
 `adb usb` restarts the daemon and may briefly disconnect it. It does not disable
 normal Wi-Fi. ADB authorization and settings are separate from a malware audit.
+The `usb-only` command also sets `persist.adb.tcp.port=-1` through the tested
+vendor helper and checks that no listener remains on 5555.
+
+When maintenance is complete, disable debugging in Settings, or from the connected
+USB session:
+
+```sh
+adb shell settings put global adb_wifi_enabled 0
+adb shell settings put global adb_enabled 0
+```
+
+The final command disconnects ADB. Enabling USB debugging for future maintenance
+can expose the vendor's network-debugging port again; keep Wi-Fi off during that
+work. Disabling debugging does not remove the vendor's root helper or establish
+that all firmware is trustworthy.
 
 ## Privacy and release contents
 

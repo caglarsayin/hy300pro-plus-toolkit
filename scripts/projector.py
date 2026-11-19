@@ -164,6 +164,33 @@ def isolate(device):
     raise RuntimeError('Network isolation could not be verified. Unplug Ethernet and inspect Wi-Fi.')
 
 
+def usb_only(device):
+    device.guard()
+    # This direct property command works on the tested build; launching a shell
+    # through the vendor helper drops privileges and must not be substituted.
+    device.shell('/system/bin/wifi root setprop persist.adb.tcp.port -1')
+    if device.prop('persist.adb.tcp.port') != '-1':
+        raise RuntimeError('Could not disable persistent network ADB.')
+    device.adb('usb')
+    # wait-for-device can briefly see the old transport before the restart.
+    deadline = time.monotonic() + 30
+    while True:
+        try:
+            device.adb('wait-for-device', timeout=max(1, deadline - time.monotonic()))
+            port = device.prop('service.adb.tcp.port')
+            break
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            if time.monotonic() >= deadline:
+                raise RuntimeError('USB ADB did not return after its restart.')
+            time.sleep(1)
+    if port not in ('', '0', '-1'):
+        raise RuntimeError('ADB still has a TCP port configured: ' + port)
+    listeners = device.shell('ss -ltn')
+    if re.search(r':5555\s', listeners):
+        raise RuntimeError('Port 5555 is still listening; investigate before enabling Wi-Fi.')
+    print('Persistent network ADB disabled; current ADB is USB-only. Normal Wi-Fi is retained.')
+
+
 def contain(device, state_file):
     device.guard()
     isolate(device)
@@ -222,6 +249,7 @@ def main():
     sub = parser.add_subparsers(dest='action', required=True)
     sub.add_parser('inspect')
     sub.add_parser('isolate')
+    sub.add_parser('usb-only')
     p = sub.add_parser('backup')
     p.add_argument('--out', required=True)
     p.add_argument('--full', action='store_true')
@@ -236,6 +264,8 @@ def main():
         backup(d, args.out, args.full)
     elif args.action == 'isolate':
         isolate(d)
+    elif args.action == 'usb-only':
+        usb_only(d)
     elif args.action == 'contain':
         contain(d, args.state)
     else:
@@ -245,5 +275,6 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except (RuntimeError, subprocess.CalledProcessError, OSError, ValueError, KeyError) as exc:
+    except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired,
+            OSError, ValueError, KeyError) as exc:
         sys.exit(str(exc))

@@ -35,7 +35,8 @@ projector on this Mac. A targeted USB inventory also found no Google/Allwinner
 device identifier. This does not identify the exact internal boot mode, but it
 means that the expected fastboot recovery route was unavailable in this session.
 No partition was flashed, no bootloader unlock was requested, and no data was
-erased. A physical power cycle is required to resume normal Android checks.
+erased. The owner physically restarted the projector, which returned to its normal
+home screen and authorized USB ADB.
 
 Containment has been applied successfully. A private, size-checked 7,818,182,656-byte
 disk copy and private boot/recovery partition copies have been saved. Managed
@@ -46,3 +47,26 @@ work around the missing recovery path.
 An independently bootable recovery method or exact board-compatible stock update
 package is needed before continuing persistent rooting. No compatible, fully
 working faster custom ROM has been established for this build.
+
+## Normal-boot verification
+
+After the physical restart, Android reported boot complete and all six targeted
+packages remained disabled. The stock launcher, HDMI application, and focus
+application were still installed. Wi-Fi remained disabled with no routes.
+
+The vendor helper successfully executed the direct command
+`setprop persist.adb.tcp.port -1`. `adb usb` then restarted ADB in USB mode.
+The active property became `service.adb.tcp.port=0`, the persistent value was `-1`,
+and the TCP listener list contained no port 5555. Normal Wi-Fi was left off and
+can be enabled later through Settings; wireless streaming was not exercised.
+
+A subsequent normal reboot completed and the six packages stayed disabled, but
+`service.adb.tcp.port` reverted to `5555` and a TCP listener returned despite
+`persist.adb.tcp.port=-1`. Therefore the USB-only workaround is session-scoped;
+the release does not claim a persistent fix. The final handoff turns debugging
+off entirely for normal use.
+
+The final session set `adb_wifi_enabled=0` and `adb_enabled=0`. The transport
+disconnected during the second command, and `adb devices -l` then showed no
+devices. No further reboot or wireless traffic test was performed with debugging
+off. Wi-Fi was left off; the owner can enable it in Settings for normal use.
