@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+private/
+backups/
+*.img
+*.apk
+*.bin
+*.log
+*.zip
+.DS_Store
