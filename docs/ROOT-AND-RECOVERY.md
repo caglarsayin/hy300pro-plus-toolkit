@@ -4,6 +4,25 @@ The stock system offers no standard `su` command. A vendor SUID helper can repor
 UID 0 for individual commands but drops privileges on shell execution. Do not
 treat that as a managed, reliable root installation.
 
+Update: `sh -p` retains UID 0 on this owner's build (ordinary `sh` drops it).
+The capability check showed effective/permitted masks zero and bounding mask
+`0xc0`, so it lacks capabilities such as SYS_ADMIN required for remounting system
+filesystems. This is a restricted privileged shell, not a Magisk installation.
+
+Read-only identity check while authorized over USB:
+
+```sh
+adb shell '/system/bin/wifi root /system/bin/sh -p -c id'
+```
+
+The running kernel's configuration exposes gzip and LZ4 ramdisk support, with XZ
+disabled. Recompressing the private Magisk ramdisk using gzip level 9 passed a
+decompression roundtrip check, but the aligned kernel/ramdisk payload was still
+34,308,096 bytes, exceeding the queried 33,554,432-byte transfer limit. No compact
+boot image was flashed or downloaded. Startup files were not removed to force a
+fit. The live command line contains `androidboot.trustchain=false`; that flag alone
+is not a validated image acceptance or restoration procedure for this unit.
+
 A Magisk boot image has been prepared privately using the owner's own stock
 image and the official Magisk release. Bootloader compatibility and a usable
 restore path must be verified before a persistent flash. The bootloader reports
@@ -53,17 +72,21 @@ The owner confirmed a fastboot logo on the projected display. A corrected USB
 inventory found `1f3a:1010`, named `USB Developer`. Selecting its USB configuration
 through PyUSB made the standard macOS `fastboot devices -l` detect the projector.
 `scripts/fastboot_probe.py` performs this configuration step and only fixed
-read-only queries (plus an explicitly selected normal reboot).
+read-only queries. It intentionally has no reboot, flash, or unlock option.
 
 Observed replies: version `0.5`, secure `yes`, maximum download size `0x02000000`
 (32 MiB). The unlocked, current-slot, and boot_a partition-size queries returned
 `not supported`; these replies do not establish an unlocked bootloader or write
 permission. The private boot image is 64 MiB. No image download, flash, unlock,
-or erase was attempted. Normal `fastboot reboot` was used afterward.
+or erase was attempted. Normal `fastboot reboot` was attempted afterward but hung:
+the owner still saw the fastboot logo, and subsequent USB queries timed out.
+A physical power cycle returned the unit to normal Android and USB ADB. Do not
+assume that `fastboot reboot` works on this unit. The optional reboot flag was
+removed from the probe after this result.
 
 Dependencies: PyUSB 1.3.1 and Homebrew libusb. Use a separate virtual environment.
 The script currently points to `/opt/homebrew/lib/libusb-1.0.dylib` on Apple Silicon.
-This resolves host communication; it is not yet a tested boot restoration method.
+This resolves initial host communication; it is not yet a tested boot restoration method.
 
 ## Normal-boot verification
 

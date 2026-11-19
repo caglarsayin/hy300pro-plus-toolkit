@@ -6,14 +6,13 @@ import usb.core
 import usb.util
 import usb.backend.libusb1
 
-QUERIES = ('version', 'product', 'secure', 'unlocked', 'current-slot',
+QUERIES = ('version', 'secure', 'unlocked', 'current-slot',
            'max-download-size', 'partition-size:boot_a')
 
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--reboot', action='store_true', help='Return to normal Android after queries')
-    args = p.parse_args()
+    p.parse_args()
     backend = usb.backend.libusb1.get_backend(find_library=lambda _: '/opt/homebrew/lib/libusb-1.0.dylib')
     device = usb.core.find(idVendor=0x1f3a, idProduct=0x1010, backend=backend)
     if device is None:
@@ -48,11 +47,12 @@ def main():
             raise RuntimeError('Fastboot response deadline exceeded')
         for name in QUERIES:
             query('getvar:' + name)
-        if args.reboot:
-            query('reboot')
     finally:
         usb.util.dispose_resources(device)
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except (usb.core.USBError, RuntimeError) as exc:
+        raise SystemExit('USB query failed; no flash was attempted: ' + str(exc))

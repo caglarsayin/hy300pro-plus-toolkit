@@ -22,6 +22,7 @@ compatibility with another projector carrying the same retail name.
 | Standard `su` | Not found |
 | Vendor `/system/bin/wifi root id` | Reports UID 0 |
 | Vendor helper launching `sh -c id` | Drops to UID 2000; capability bounding set is restricted |
+| Vendor helper launching `sh -p -c id` | Retains UID 0; permitted/effective capabilities zero, bounding mask 0xc0 |
 | Stock network ADB setting | TCP port 5555 |
 | USB-only ADB persistence | Reverts to port 5555 after reboot despite persistent port -1 |
 | Stock launcher retained | `com.htc.spectraos` |
