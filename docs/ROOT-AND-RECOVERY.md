@@ -110,3 +110,22 @@ The final session set `adb_wifi_enabled=0` and `adb_enabled=0`. The transport
 disconnected during the second command, and `adb devices -l` then showed no
 devices. No further reboot or wireless traffic test was performed with debugging
 off. Wi-Fi was left off; the owner can enable it in Settings for normal use.
+
+## Sparse transfer review for projector.20250325.210225
+
+The stock and Magisk-patched boot images each occupy 64 MiB. Fastboot on
+this unit advertised a 32 MiB maximum download. The Android fastboot client
+can split a logical image into sparse transfers with a 16 MiB limit.
+A related Allwinner U-Boot recognizes Android sparse images in its partition
+flash handler. The exact bootloader on this projector has only been queried.
+Correct placement of successive sparse writes on this build remains unverified.
+
+Android reported a locked boot state, and acceptance of a modified boot image
+remains unverified. A power cycle recovered from a fastboot session with stock
+boot intact. Restoring stock boot after a failed write remains untested.
+Keep the active boot partition stock until an independent recovery route is
+verified. The validated patch is a local artifact. Malware removal and wireless
+operation would each need separate verification.
+
+[Android fastboot client](https://android.googlesource.com/platform/system/core/+/master/fastboot/fastboot.cpp) ·
+[Related Allwinner partition flash handler](https://github.com/lindenis-org/lindenis-v833-lichee-brandy-2.0-u-boot-2018/blob/d3080b177f1cbc09ad87b6ce348a78cc56a90950/drivers/sunxi_usb/usb_fastboot.c#L860-L884)
