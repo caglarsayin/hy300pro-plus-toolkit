@@ -10,6 +10,7 @@ FILES = (
     '.gitignore', 'LICENSE', 'README.md',
     'docs/FINDINGS.md', 'docs/ROOT-AND-RECOVERY.md', 'docs/SOURCES.md',
     'scripts/projector.py', 'scripts/patch_boot.py', 'scripts/package_release.py',
+    'scripts/fastboot_probe.py',
     'tests/test_projector.py',
 )
 

@@ -28,12 +28,11 @@ is disabled just because the main disk node has permissive permissions.
 The release will record the actual test outcome below rather than imply that a
 generated image has been tested.
 
-## Bootloader test outcome
+## Initial bootloader test (superseded by retry below)
 
 `adb reboot bootloader` disconnected ADB. `fastboot devices -l` returned no
-projector on this Mac. A targeted USB inventory also found no Google/Allwinner
-device identifier. This does not identify the exact internal boot mode, but it
-means that the expected fastboot recovery route was unavailable in this session.
+projector on this Mac. The original USB inventory parser incorrectly iterated a
+dictionary as a list; its claim of no Google/Allwinner identifier was invalid.
 No partition was flashed, no bootloader unlock was requested, and no data was
 erased. The owner physically restarted the projector, which returned to its normal
 home screen and authorized USB ADB.
@@ -47,6 +46,24 @@ work around the missing recovery path.
 An independently bootable recovery method or exact board-compatible stock update
 package is needed before continuing persistent rooting. No compatible, fully
 working faster custom ROM has been established for this build.
+
+## Successful fastboot retry
+
+The owner confirmed a fastboot logo on the projected display. A corrected USB
+inventory found `1f3a:1010`, named `USB Developer`. Selecting its USB configuration
+through PyUSB made the standard macOS `fastboot devices -l` detect the projector.
+`scripts/fastboot_probe.py` performs this configuration step and only fixed
+read-only queries (plus an explicitly selected normal reboot).
+
+Observed replies: version `0.5`, secure `yes`, maximum download size `0x02000000`
+(32 MiB). The unlocked, current-slot, and boot_a partition-size queries returned
+`not supported`; these replies do not establish an unlocked bootloader or write
+permission. The private boot image is 64 MiB. No image download, flash, unlock,
+or erase was attempted. Normal `fastboot reboot` was used afterward.
+
+Dependencies: PyUSB 1.3.1 and Homebrew libusb. Use a separate virtual environment.
+The script currently points to `/opt/homebrew/lib/libusb-1.0.dylib` on Apple Silicon.
+This resolves host communication; it is not yet a tested boot restoration method.
 
 ## Normal-boot verification
 

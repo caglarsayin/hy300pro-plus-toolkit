@@ -65,6 +65,14 @@ Do not unlock, wipe, change slots, or overwrite vbmeta based on a generic tutori
 Slot B did not contain an Android boot header on the tested unit and is not a
 verified fallback.
 
+### macOS fastboot detection
+
+If the projector shows a fastboot logo but `fastboot devices` is empty, the USB
+configuration may need activation. On the tested Apple Silicon Mac, PyUSB 1.3.1
+with Homebrew libusb and `python scripts/fastboot_probe.py` established read-only
+communication; standard fastboot then detected it. See the recovery document for
+the observed limits. This probe never flashes, downloads an image, or unlocks.
+
 ## Wireless use
 
 Wi-Fi hardware and normal streaming remain available. Use Settings to enable
